@@ -19,7 +19,6 @@ jobs:
       - name: 💻 Install dependencies via Chocolatey
         shell: powershell
         run: |
-          choco install -y nasm
           choco install -y yasm
           choco install -y upx
           choco install -y 7zip
@@ -43,6 +42,18 @@ jobs:
               }
           }
           Write-Host "PATH updated: $env:PATH"
+
+      - name: 🔧 Install NASM (official binary)
+        shell: powershell
+        run: |
+            $version = "2.16.01"
+            $url = "https://www.nasm.us/pub/nasm/releasebuilds/$version/win64/nasm-$version-win64.zip"
+            $dest = "$env:RUNNER_TEMP\nasm"
+        
+            Invoke-WebRequest $url -OutFile "$dest.zip"
+            Expand-Archive "$dest.zip" -DestinationPath $dest
+        
+            echo "$dest\nasm-$version" >> $env:GITHUB_PATH
 
 
       
