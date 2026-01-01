@@ -1,146 +1,76 @@
 name: Build VeraCrypt for Windows
 
 on:
-  workflow_dispatch:
-    inputs:
-      configuration:
-        description: "Build configuration"
-        required: false
-        default: "Release"
-      platform:
-        description: "Build platform (Win32, x64, or both)"
-        required: false
-        default: "both"
-
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+  workflow_dispatch:   # allows manual triggering
 
 jobs:
   build-windows:
-    runs-on: windows-2022
+    runs-on: windows-2019
 
     env:
-      CONFIGURATION: ${{ github.event.inputs.configuration || 'Release' }}
+      CONFIGURATION: Release
 
     steps:
-      # ------------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------------
-      - name: 🛎️ Checkout source
-        uses: actions/checkout@v4
+      - name: 🛎️ Checkout repository
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      # ------------------------------------------------------------
-      # MSBuild (VS2022 / v143)
-      # ------------------------------------------------------------
-      - name: 💡 Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
-      # ------------------------------------------------------------
-      # Install dependencies via Chocolatey
-      # ------------------------------------------------------------
-      - name: 🧰 Install build dependencies
+      - name: 💻 Install dependencies via Chocolatey
         shell: powershell
         run: |
-          choco install nasm -y
-          choco install yasm -y
-          choco install upx -y
-          choco install 7zip -y
-          choco install wixtoolset -y
+          choco install -y nasm
+          choco install -y yasm
+          choco install -y upx
+          choco install -y 7zip
+          choco install -y wixtoolset
 
-      # ------------------------------------------------------------
-      # Add Chocolatey + NASM to PATH (robust)
-      # ------------------------------------------------------------
-      - name: 🔧 Add Chocolatey tools and NASM to PATH
+      - name: 🔧 Add Chocolatey-installed tools to PATH
         shell: powershell
         run: |
-          # 1) Always add Chocolatey shim directory
-          "C:\ProgramData\chocolatey\bin" |
-            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-          # 2) Locate NASM actual install location
-          $nasmExe = Get-Command nasm.exe -ErrorAction SilentlyContinue
-
-          if (-not $nasmExe) {
-            $candidates = @(
-              "C:\Program Files\NASM\nasm.exe",
-              "C:\Program Files (x86)\NASM\nasm.exe"
-            )
-
-            foreach ($candidate in $candidates) {
-              if (Test-Path $candidate) {
-                $nasmExe = $candidate
-                break
+          $paths = @(
+              "C:\ProgramData\chocolatey\bin", 
+              "C:\Program Files\NASM", 
+              "C:\Program Files (x86)\WiX Toolset v3.11\bin",
+              "C:\ProgramData\chocolatey\lib\yasm\tools",
+              "C:\ProgramData\chocolatey\lib\upx\tools",
+              "C:\ProgramData\chocolatey\lib\7zip\tools"
+          )
+          foreach ($p in $paths) {
+              if (Test-Path $p) {
+                  Write-Host "Adding $p to PATH"
+                  $env:PATH = "$p;$env:PATH"
               }
-            }
           }
+          Write-Host "PATH updated: $env:PATH"
 
-          if (-not $nasmExe) {
-            Write-Error "NASM not found after Chocolatey install"
-            exit 1
-          }
-
-          $nasmDir = Split-Path $nasmExe
-          Write-Host "NASM found in $nasmDir"
-
-          $nasmDir |
-            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      # ------------------------------------------------------------
-      # Verify tools (PATH now active)
-      # ------------------------------------------------------------
-      - name: 🔍 Verify toolchain
+      - name: 🧪 Verify dependencies
         shell: powershell
         run: |
-          where nasm
           nasm -v
-          where upx
-          where 7z
-          where candle || echo "WiX candle.exe not in PATH yet (expected)"
-          where light  || echo "WiX light.exe not in PATH yet (expected)"
+          yasm --version
+          upx --version
+          7z
+          candle.exe -? 
+          light.exe -?
 
-      # ------------------------------------------------------------
-      # Build Win32
-      # ------------------------------------------------------------
-      - name: 🏗️ Build VeraCrypt (Win32)
-        if: ${{ github.event.inputs.platform != 'x64' }}
+      - name: 🏗️ Build VeraCrypt Solution
         shell: cmd
         run: |
-          msbuild src\VeraCrypt.sln ^
-            /m ^
-            /p:Configuration=%CONFIGURATION% ^
-            /p:Platform=Win32
+          REM Build Win32
+          msbuild src\VeraCrypt.sln /p:Configuration=%CONFIGURATION% /p:Platform=Win32 /m
+          REM Build x64
+          msbuild src\VeraCrypt.sln /p:Configuration=%CONFIGURATION% /p:Platform=x64 /m
 
-      # ------------------------------------------------------------
-      # Build x64
-      # ------------------------------------------------------------
-      - name: 🏗️ Build VeraCrypt (x64)
-        if: ${{ github.event.inputs.platform != 'Win32' }}
-        shell: cmd
-        run: |
-          msbuild src\VeraCrypt.sln ^
-            /m ^
-            /p:Configuration=%CONFIGURATION% ^
-            /p:Platform=x64
-
-      # ------------------------------------------------------------
-      # Collect outputs
-      # ------------------------------------------------------------
-      - name: 📦 Collect build artifacts
+      - name: 📦 Collect Build Outputs
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force build-artifacts
-          Get-ChildItem -Recurse src -Include *.exe,*.msi |
-            Copy-Item -Destination build-artifacts -Force
+          $outDir = "build-artifacts"
+          New-Item -ItemType Directory -Force -Path $outDir
+          Copy-Item -Path src\Release\Setup\* -Destination $outDir -Recurse -Force
 
-      # ------------------------------------------------------------
-      # Upload artifacts
-      # ------------------------------------------------------------
-      - name: 📤 Upload build artifacts
+      - name: 📤 Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: VeraCrypt-Windows-${{ env.CONFIGURATION }}
+          name: VeraCrypt-Windows-Build
           path: build-artifacts/
