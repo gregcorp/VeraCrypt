@@ -36,11 +36,11 @@ jobs:
       # ------------------------------------------------------------
       # MSBuild (VS2022 / v143)
       # ------------------------------------------------------------
-      - name: 💡 Setup MSBuild (VS2022)
+      - name: 💡 Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
       # ------------------------------------------------------------
-      # Dependencies
+      # Install dependencies
       # ------------------------------------------------------------
       - name: 🧰 Install build dependencies
         shell: powershell
@@ -52,12 +52,17 @@ jobs:
           choco install wixtoolset -y
 
       # ------------------------------------------------------------
-      # Fix: Ensure NASM is visible to MSBuild custom steps
+      # Make NASM visible to MSBuild (CRITICAL)
       # ------------------------------------------------------------
-      - name: 🔧 Ensure NASM is in PATH
+      - name: 🔧 Add Chocolatey bin to PATH
         shell: powershell
         run: |
-          echo "C:\ProgramData\chocolatey\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "C:\ProgramData\chocolatey\bin" |
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: 🔍 Verify NASM
+        shell: powershell
+        run: |
           nasm -v
 
       # ------------------------------------------------------------
