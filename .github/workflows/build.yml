@@ -40,7 +40,7 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       # ------------------------------------------------------------
-      # Install dependencies
+      # Install dependencies via Chocolatey
       # ------------------------------------------------------------
       - name: 🧰 Install build dependencies
         shell: powershell
@@ -52,18 +52,55 @@ jobs:
           choco install wixtoolset -y
 
       # ------------------------------------------------------------
-      # Make NASM visible to MSBuild (CRITICAL)
+      # Add Chocolatey + NASM to PATH (robust)
       # ------------------------------------------------------------
-      - name: 🔧 Add Chocolatey bin to PATH
+      - name: 🔧 Add Chocolatey tools and NASM to PATH
         shell: powershell
         run: |
+          # 1) Always add Chocolatey shim directory
           "C:\ProgramData\chocolatey\bin" |
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: 🔍 Verify NASM
+          # 2) Locate NASM actual install location
+          $nasmExe = Get-Command nasm.exe -ErrorAction SilentlyContinue
+
+          if (-not $nasmExe) {
+            $candidates = @(
+              "C:\Program Files\NASM\nasm.exe",
+              "C:\Program Files (x86)\NASM\nasm.exe"
+            )
+
+            foreach ($candidate in $candidates) {
+              if (Test-Path $candidate) {
+                $nasmExe = $candidate
+                break
+              }
+            }
+          }
+
+          if (-not $nasmExe) {
+            Write-Error "NASM not found after Chocolatey install"
+            exit 1
+          }
+
+          $nasmDir = Split-Path $nasmExe
+          Write-Host "NASM found in $nasmDir"
+
+          $nasmDir |
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      # ------------------------------------------------------------
+      # Verify tools (PATH now active)
+      # ------------------------------------------------------------
+      - name: 🔍 Verify toolchain
         shell: powershell
         run: |
+          where nasm
           nasm -v
+          where upx
+          where 7z
+          where candle || echo "WiX candle.exe not in PATH yet (expected)"
+          where light  || echo "WiX light.exe not in PATH yet (expected)"
 
       # ------------------------------------------------------------
       # Build Win32
