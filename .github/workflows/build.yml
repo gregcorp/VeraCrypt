@@ -82,7 +82,8 @@ jobs:
         run: |
           $outDir = "build-artifacts"
           New-Item -ItemType Directory -Force -Path $outDir
-          Copy-Item -Path src\Release\Setup\* -Destination $outDir -Recurse -Force
+          Copy-Item -Path "src\Release\Setup Files" -Destination $outDir -Recurse -Force
+
 
       - name: 📤 Upload Build Artifacts
         uses: actions/upload-artifact@v4
