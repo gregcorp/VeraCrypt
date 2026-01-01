@@ -1,0 +1,74 @@
+name: Build VeraCrypt for Windows
+
+on:
+  # Manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: "Build configuration"
+        required: false
+        default: "Release"
+      platform:
+        description: "Build platform (Win32, x64, or both)"
+        required: false
+        default: "both"
+
+  # Optional: keep automatic triggers if you want
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-windows:
+    runs-on: windows-2019
+
+    env:
+      CONFIGURATION: ${{ github.event.inputs.configuration || 'Release' }}
+
+    steps:
+      - name: 🛎️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 💡 Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: 🧰 Install build dependencies
+        shell: powershell
+        run: |
+          choco install nasm -y
+          choco install yasm -y
+          choco install upx -y
+          choco install 7zip -y
+          choco install wixtoolset -y
+
+      - name: 🏗️ Build VeraCrypt (Win32)
+        if: ${{ github.event.inputs.platform != 'x64' }}
+        shell: cmd
+        run: |
+          msbuild src\VeraCrypt.sln ^
+            /p:Configuration=%CONFIGURATION% ^
+            /p:Platform=Win32
+
+      - name: 🏗️ Build VeraCrypt (x64)
+        if: ${{ github.event.inputs.platform != 'Win32' }}
+        shell: cmd
+        run: |
+          msbuild src\VeraCrypt.sln ^
+            /p:Configuration=%CONFIGURATION% ^
+            /p:Platform=x64
+
+      - name: 📦 Collect build outputs
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force build-artifacts
+          Get-ChildItem -Recurse src -Include *.exe,*.msi |
+            Copy-Item -Destination build-artifacts -Force
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: VeraCrypt-Windows-${{ env.CONFIGURATION }}
+          path: build-artifacts/
