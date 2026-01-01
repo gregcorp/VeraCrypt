@@ -65,6 +65,10 @@ jobs:
           candle.exe -? 
           light.exe -?
 
+      - name: 🧰 Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+
       - name: 🏗️ Build VeraCrypt Solution
         shell: cmd
         run: |
