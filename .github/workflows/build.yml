@@ -96,13 +96,6 @@ jobs:
           REM Build x64
           msbuild src\VeraCrypt.sln /p:Configuration=%CONFIGURATION% /p:Platform=x64 /m
 
-
-    
-      - name: 🛠️ Build MSI Installer (x64)
-        shell: cmd
-        run: |
-          cd src\Release\Setup Files
-          build_msi_x64.bat
         
 
       - name: 📦 Collect Build Outputs
