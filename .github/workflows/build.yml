@@ -27,7 +27,7 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v3.96/upx-3.96-win32.zip" -OutFile "upx.zip"
           Expand-Archive -Path "upx.zip" -DestinationPath "upx"
-          echo "PATH=$PWD\upx;$env:PATH" >> $env:GITHUB_ENV
+          echo "PATH=$PWD\upx\upx-3.96-win32;$env:PATH" >> $env:GITHUB_ENV
 
       - name: 🔧 Download WiX Toolset
         shell: powershell
