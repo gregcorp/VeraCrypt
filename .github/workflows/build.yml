@@ -55,14 +55,6 @@ jobs:
         
             echo "$dest\nasm-$version" >> $env:GITHUB_PATH
 
-
-      
-      - name: 🔄 Refresh environment
-        shell: powershell
-        run: |
-          Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
-          refreshenv
-
       - name: 🧪 Verify dependencies
         shell: powershell
         run: |
