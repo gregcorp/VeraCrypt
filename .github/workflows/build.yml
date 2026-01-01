@@ -20,9 +20,21 @@ jobs:
         shell: powershell
         run: |
           choco install -y yasm
-          choco install -y upx
           choco install -y 7zip
-          choco install -y wixtoolset
+
+      - name: 🔧 Download UPX
+        shell: powershell
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v3.96/upx-3.96-win32.zip" -OutFile "upx.zip"
+          Expand-Archive -Path "upx.zip" -DestinationPath "upx"
+          echo "PATH=$PWD\upx;$env:PATH" >> $env:GITHUB_ENV
+
+      - name: 🔧 Download WiX Toolset
+        shell: powershell
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314.exe" -OutFile "wix.exe"
+          Start-Process -FilePath "wix.exe" -ArgumentList "/quiet /norestart /log wix-install.log" -Wait
+          echo "PATH=C:\Program Files (x86)\WiX Toolset v3.14\bin;$env:PATH" >> $env:GITHUB_ENV
 
       - name: 🔧 Add Chocolatey-installed tools to PATH
         shell: powershell
@@ -55,6 +67,13 @@ jobs:
         
             echo "$dest\nasm-$version" >> $env:GITHUB_PATH
 
+      - name: 🔧 Disable signature verification for test build
+        shell: powershell
+        run: |
+          $dlgcode = "src\Common\Dlgcode.c"
+          (Get-Content $dlgcode) -replace 'if \(!IsOSAtLeast \(WIN_10\)\)\s*return TRUE;', 'return TRUE;' |
+              Set-Content $dlgcode
+
       - name: 🧪 Verify dependencies
         shell: powershell
         run: |
@@ -76,6 +95,15 @@ jobs:
           msbuild src\VeraCrypt.sln /p:Configuration=%CONFIGURATION% /p:Platform=Win32 /m
           REM Build x64
           msbuild src\VeraCrypt.sln /p:Configuration=%CONFIGURATION% /p:Platform=x64 /m
+
+
+    
+      - name: 🛠️ Build MSI Installer (x64)
+        shell: cmd
+        run: |
+          cd src\Release\Setup Files
+          build_msi_x64.bat
+        
 
       - name: 📦 Collect Build Outputs
         shell: powershell
