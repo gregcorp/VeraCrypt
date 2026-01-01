@@ -25,11 +25,14 @@ jobs:
           choco install -y 7zip
           choco install -y wixtoolset
 
-      - name: 🔍 Locate nasm
+      - name: 🔧 Export tools to PATH
         shell: powershell
         run: |
-          Get-ChildItem -Recurse -Filter nasm.exe C:\ProgramData\chocolatey -ErrorAction SilentlyContinue
-          Get-Command nasm -All
+          echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
+          echo "C:\ProgramData\chocolatey\lib\yasm\tools" >> $env:GITHUB_PATH
+          echo "C:\ProgramData\chocolatey\lib\upx\tools" >> $env:GITHUB_PATH
+          echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" >> $env:GITHUB_PATH
+
       
 
       - name: 🔧 Add Chocolatey-installed tools to PATH
