@@ -25,6 +25,13 @@ jobs:
           choco install -y 7zip
           choco install -y wixtoolset
 
+      - name: 🔍 Locate nasm
+        shell: powershell
+        run: |
+          Get-ChildItem -Recurse -Filter nasm.exe C:\ProgramData\chocolatey -ErrorAction SilentlyContinue
+          Get-Command nasm -All
+      
+
       - name: 🔧 Add Chocolatey-installed tools to PATH
         shell: powershell
         run: |
