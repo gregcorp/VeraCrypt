@@ -1,6 +1,7 @@
 This archive contains the source code of VeraCrypt.
 It is based on the original TrueCrypt 7.1a with security enhancements and modifications.
 
+
 # Important
 
 You may use the source code contained in this archive only if you accept and
